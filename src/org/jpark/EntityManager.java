@@ -59,7 +59,7 @@ public class EntityManager
 
 	public void commit(Connection connection) throws SQLException
 	{
-		// TODO
+		// TODO commit
 		connection.setAutoCommit(true);
 		connection.commit();
 		connection.close();

@@ -1,0 +1,20 @@
+apply plugin: 'java'
+
+sourceSets {
+    main {
+        java.srcDir 'src'
+        resources.srcDir 'res'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def slf4jVersion = "1.7.26"
+
+dependencies {
+    compile group: 'org.slf4j', name: 'slf4j-api', version: "$slf4jVersion"
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: "$slf4jVersion"
+    compile group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+}

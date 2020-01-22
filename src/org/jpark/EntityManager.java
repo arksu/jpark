@@ -206,6 +206,10 @@ public class EntityManager
 							ps.executeUpdate();
 						}
 					}
+					else
+					{
+						_log.debug("updatedCount=" + updatedCount + " no update needed, skip");
+					}
 				}
 				catch (IllegalAccessException e)
 				{

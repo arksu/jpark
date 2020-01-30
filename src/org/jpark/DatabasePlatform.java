@@ -229,6 +229,11 @@ public class DatabasePlatform
 			value = Short.valueOf(resultSet.getShort(columnNumber));
 			isPrimitive = ((Short) value).shortValue() == 0;
 		}
+		else if ((fieldType == ClassConstants.PBOOLEAN) || (fieldType == ClassConstants.BOOLEAN))
+		{
+			value = Boolean.valueOf(resultSet.getByte(columnNumber) == 1);
+			isPrimitive = !((Boolean) value);
+		}
 		else if ((type == Types.TIME) || (type == Types.DATE) || (type == Types.TIMESTAMP))
 		{
 			// PERF: Optimize dates by calling direct get method if type is Date or Time,

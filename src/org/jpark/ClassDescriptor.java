@@ -8,6 +8,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
@@ -86,6 +87,7 @@ public class ClassDescriptor
 			_table.setDropOnDeploy(extendedData.drop());
 			_table.setCreateOnDeploy(extendedData.create());
 			_table.setTruncateOnDeploy(extendedData.truncate());
+			_table.setMigrateOnDeploy(extendedData.migrate());
 			_table.setCreationSuffix(extendedData.creationSuffix());
 		}
 
@@ -120,6 +122,86 @@ public class ClassDescriptor
 				}
 				idField.setPrimaryKey(true);
 				_primaryKeyFields.add(idField);
+			}
+		}
+	}
+
+	public void deploy(Connection connection) throws SQLException
+	{
+		// если надо деплоить таблицу
+		if (_table.isDeploy())
+		{
+			// проверим существует ли такая таблица в базе
+			boolean exists = _table.checkExists(connection);
+			_log.debug("DEPLOY table: " + _table.getName() + ", exists: " + exists);
+
+			try (Statement st = connection.createStatement())
+			{
+				if (exists)
+				{
+					// уничтожаем таблицу если надо
+					if (_table.isDropOnDeploy())
+					{
+						String sql = "DROP TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
+						_log.debug("execute SQL: " + sql);
+						st.execute(sql);
+						exists = false;
+					}
+					// очистка таблицы
+					else if (_table.isTruncateOnDeploy())
+					{
+						String sql = "TRUNCATE TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
+						_log.debug("execute SQL: " + sql);
+						st.execute(sql);
+					}
+					// миграция таблицы (если не уничтожаем)
+					if (!_table.isDropOnDeploy() && _table.isMigrateOnDeploy())
+					{
+						String sql = "SHOW COLUMNS FROM " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
+						_log.debug("MIGRATE. execute SQL: " + sql);
+						final ResultSet rs = st.executeQuery(sql);
+						List<String> dbFields = new ArrayList<>(8);
+						while (rs.next())
+						{
+							final String fieldName = rs.getString("Field");
+							dbFields.add(fieldName);
+							_log.debug(fieldName);
+
+							boolean found = false;
+							for (DatabaseField f : _fields)
+							{
+								if (fieldName.equals(f.getName()))
+								{
+									found = true;
+								}
+							}
+							// если в базе есть поле которого нет в аннотации - надо его грохнуть
+							if (!found)
+							{
+								// TODO
+							}
+						}
+						// по всем полям сущности
+						for (DatabaseField f : _fields)
+						{
+							// если поля нет в базе - добавим его в базу
+							if (!dbFields.contains(f.getName()))
+							{
+								// TODO
+
+							}
+						}
+					}
+				}
+				else
+				{
+					if (_table.isCreateOnDeploy())
+					{
+						String sql = buildCreateSql();
+						_log.debug("execute SQL: " + sql);
+						st.executeQuery(sql);
+					}
+				}
 			}
 		}
 	}
@@ -193,40 +275,6 @@ public class ClassDescriptor
 		}
 
 		return sql.toString();
-	}
-
-	public void deploy(Connection connection) throws SQLException
-	{
-		if (_table.isDeploy())
-		{
-			boolean exists = _table.checkExists(connection);
-			_log.debug("deploy table: " + _table.getName() + ", exists: " + exists);
-			Statement st = connection.createStatement();
-
-			if (exists)
-			{
-				if (_table.isDropOnDeploy())
-				{
-					String sql = "DROP TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
-					_log.debug("execute SQL: " + sql);
-					st.execute(sql);
-					exists = false;
-				}
-				else if (_table.isTruncateOnDeploy())
-				{
-					String sql = "TRUNCATE TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
-					_log.debug("execute SQL: " + sql);
-					st.execute(sql);
-				}
-			}
-
-			if (_table.isCreateOnDeploy() && !exists)
-			{
-				String sql = buildCreateSql();
-				_log.debug("execute SQL: " + sql);
-				st.executeQuery(sql);
-			}
-		}
 	}
 
 	public String getSimpleInsertSql()

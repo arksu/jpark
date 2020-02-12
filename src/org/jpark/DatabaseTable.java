@@ -1,5 +1,8 @@
 package org.jpark;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +12,8 @@ import java.util.List;
 
 public class DatabaseTable
 {
+	private static final Logger _log = LoggerFactory.getLogger(DatabaseTable.class.getName());
+
 	private String _name;
 
 	private String _creationSuffix;
@@ -18,6 +23,8 @@ public class DatabaseTable
 	private boolean _truncateOnDeploy = false;
 
 	private boolean _dropOnDeploy = false;
+
+	private boolean _migrateOnDeploy = true;
 
 	private boolean _deploy = true;
 
@@ -73,6 +80,16 @@ public class DatabaseTable
 		_dropOnDeploy = dropOnDeploy;
 	}
 
+	public boolean isMigrateOnDeploy()
+	{
+		return _migrateOnDeploy;
+	}
+
+	public void setMigrateOnDeploy(boolean migrateOnDeploy)
+	{
+		_migrateOnDeploy = migrateOnDeploy;
+	}
+
 	public boolean isDeploy()
 	{
 		return _deploy;
@@ -100,8 +117,10 @@ public class DatabaseTable
 	public boolean checkExists(Connection connection) throws SQLException
 	{
 		String sql = "SHOW TABLES LIKE '" + _name + "'";
-		Statement st = connection.createStatement();
-		ResultSet rs = st.executeQuery(sql);
-		return rs.isBeforeFirst();
+		try (Statement st = connection.createStatement())
+		{
+			ResultSet rs = st.executeQuery(sql);
+			return rs.isBeforeFirst();
+		}
 	}
 }

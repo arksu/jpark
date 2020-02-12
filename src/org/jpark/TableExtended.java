@@ -37,4 +37,9 @@ public @interface TableExtended
 	 * надо ли дропать таблицу при старте системы
 	 */
 	boolean drop() default false;
+
+	/**
+	 * надо ли делать миграцию структуры этой таблицы при деплое?
+	 */
+	boolean migrate() default true;
 }

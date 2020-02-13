@@ -3,6 +3,8 @@ package org.jpark;
 import javax.persistence.Column;
 import java.lang.reflect.Field;
 
+import static org.jpark.DatabasePlatform.SEPARATE_CHAR;
+
 /**
  * описание поля в бд
  */
@@ -155,7 +157,7 @@ public class DatabaseField
 
 	public String getCreateSql()
 	{
-		StringBuilder s = new StringBuilder(_name);
+		StringBuilder s = new StringBuilder(SEPARATE_CHAR + _name + SEPARATE_CHAR);
 		s.append(" ");
 		// если у нас явно определен тип колонки тупо прокинем его
 		if (_columnDefinition != null && _columnDefinition.length() != 0)

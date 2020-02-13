@@ -157,50 +157,74 @@ public class ClassDescriptor
 					// миграция таблицы (если не уничтожаем)
 					if (!_table.isDropOnDeploy() && _table.isMigrateOnDeploy())
 					{
-						String sql = "SHOW COLUMNS FROM " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR;
+						StringBuilder sql = new StringBuilder("SHOW COLUMNS FROM " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
 						_log.debug("MIGRATE. execute SQL: " + sql);
-						final ResultSet rs = st.executeQuery(sql);
+						final ResultSet rs = st.executeQuery(sql.toString());
 						List<String> dbFields = new ArrayList<>(8);
+
+						sql = new StringBuilder("ALTER TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
+						boolean foundToDrop = false;
+						// проходим все найденные поля в базе
 						while (rs.next())
 						{
 							final String fieldName = rs.getString("Field");
 							dbFields.add(fieldName);
-							_log.debug(fieldName);
 
+							// ищем в полях сущности
 							boolean found = false;
 							for (DatabaseField f : _fields)
 							{
 								if (fieldName.equals(f.getName()))
 								{
 									found = true;
+									break;
 								}
 							}
-							// если в базе есть поле которого нет в аннотации - надо его грохнуть
+							// если в базе есть поле которого нет в сущности - надо его грохнуть
 							if (!found)
 							{
-								// TODO
+								if (foundToDrop)
+								{
+									sql.append(",");
+								}
+								sql.append(" DROP COLUMN " + SEPARATE_CHAR).append(fieldName).append(SEPARATE_CHAR);
+								foundToDrop = true;
 							}
 						}
+						if (foundToDrop)
+						{
+							_log.debug("execute SQL: " + sql);
+							st.executeUpdate(sql.toString());
+						}
+
+						sql = new StringBuilder("ALTER TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
+						boolean foundToAdd = false;
 						// по всем полям сущности
 						for (DatabaseField f : _fields)
 						{
 							// если поля нет в базе - добавим его в базу
 							if (!dbFields.contains(f.getName()))
 							{
-								// TODO
-
+								if (foundToAdd)
+								{
+									sql.append(",");
+								}
+								sql.append(" ADD COLUMN ").append(f.getCreateSql());
+								foundToAdd = true;
 							}
+						}
+						if (foundToAdd)
+						{
+							_log.debug("execute SQL: " + sql);
+							st.executeUpdate(sql.toString());
 						}
 					}
 				}
-				else
+				if (!exists && _table.isCreateOnDeploy())
 				{
-					if (_table.isCreateOnDeploy())
-					{
-						String sql = buildCreateSql();
-						_log.debug("execute SQL: " + sql);
-						st.executeQuery(sql);
-					}
+					String sql = buildCreateSql();
+					_log.debug("execute SQL: " + sql);
+					st.executeQuery(sql);
 				}
 			}
 		}

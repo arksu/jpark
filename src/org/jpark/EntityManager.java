@@ -1,9 +1,12 @@
 package org.jpark;
 
+import org.jpark.helper.ClassFinder;
 import org.jpark.helper.IdentityWeakHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.persistence.Entity;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.ArrayList;
@@ -76,10 +79,48 @@ public class EntityManager
 	/**
 	 * добавить класс сущности
 	 */
-	public void addEntityClass(Class<?> clazz)
+	private void addEntityClass(Class<?> clazz)
 	{
-		ClassDescriptor descriptor = new ClassDescriptor(clazz);
-		_descriptors.put(clazz, descriptor);
+		// TODO
+		_log.debug("addEntityClass: " + clazz.getCanonicalName());
+
+		// проверим что переданный класс это сущность JPA
+		Entity entity = clazz.getAnnotation(Entity.class);
+		if (entity != null)
+		{
+			try
+			{
+				ClassDescriptor descriptor = new ClassDescriptor(clazz);
+				_descriptors.put(clazz, descriptor);
+			}
+			catch (NoSuchMethodException e)
+			{
+				_log.error("No default constructor for " + clazz.getCanonicalName());
+			}
+		}
+	}
+
+	/**
+	 * поиск сущностей по пакету
+	 */
+	public void findEntities(String packageName)
+	{
+		try
+		{
+			final Class<?>[] classes = ClassFinder.getClasses(packageName);
+			for (Class<?> c : classes)
+			{
+				addEntityClass(c);
+			}
+		}
+		catch (IOException e)
+		{
+
+		}
+		catch (ClassNotFoundException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 	/**

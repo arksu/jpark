@@ -3,7 +3,10 @@ package org.jpark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.Table;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -40,7 +43,7 @@ public class ClassDescriptor
 
 	private Constructor<?> _defaultConstructor;
 
-	public ClassDescriptor(Class<?> clazz)
+	public ClassDescriptor(Class<?> clazz) throws NoSuchMethodException, IllegalArgumentException
 	{
 		_fields = new ArrayList<>(8);
 		_primaryKeyFields = new ArrayList<>(2);
@@ -48,13 +51,6 @@ public class ClassDescriptor
 		_javaClass = clazz;
 		_javaClassName = clazz.getName();
 		_defaultConstructor = buildDefaultConstructorFor(_javaClass);
-
-		// проверим что переданный класс это сущность JPA
-		Entity entity = clazz.getAnnotation(Entity.class);
-		if (entity == null)
-		{
-			throw new IllegalArgumentException("no entity annotation for class: " + clazz.getName());
-		}
 
 		// читаем данные по таблице
 		Table tableAnnotation = clazz.getAnnotation(Table.class);
@@ -462,18 +458,11 @@ public class ClassDescriptor
 	/**
 	 * Build and return the default (zero-argument) constructor for the specified class.
 	 */
-	protected Constructor<?> buildDefaultConstructorFor(Class<?> javaClass)
+	protected Constructor<?> buildDefaultConstructorFor(Class<?> javaClass) throws NoSuchMethodException
 	{
-		try
-		{
-			Constructor<?> result = javaClass.getDeclaredConstructor();
-			result.setAccessible(true);
-			return result;
-		}
-		catch (NoSuchMethodException exception)
-		{
-			throw new RuntimeException(javaClass.getName() + " no such <Default Constructor>");
-		}
+		Constructor<?> result = javaClass.getDeclaredConstructor();
+		result.setAccessible(true);
+		return result;
 	}
 
 	public Object buildNewInstance()

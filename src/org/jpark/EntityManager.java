@@ -81,15 +81,13 @@ public class EntityManager
 	 */
 	private void addEntityClass(Class<?> clazz)
 	{
-		// TODO
-		_log.debug("addEntityClass: " + clazz.getCanonicalName());
-
 		// проверим что переданный класс это сущность JPA
 		Entity entity = clazz.getAnnotation(Entity.class);
 		if (entity != null)
 		{
 			try
 			{
+				_log.debug("addEntityClass: " + clazz.getCanonicalName());
 				ClassDescriptor descriptor = new ClassDescriptor(clazz);
 				_descriptors.put(clazz, descriptor);
 			}

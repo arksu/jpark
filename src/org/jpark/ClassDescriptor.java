@@ -2,6 +2,7 @@ package org.jpark;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.awt.windows.ThemeReader;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -10,12 +11,14 @@ import javax.persistence.Table;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
 
+import static org.jpark.DatabasePlatform.APOSTROPHE_CHAR;
 import static org.jpark.DatabasePlatform.SEPARATE_CHAR;
 
 /**
@@ -156,15 +159,19 @@ public class ClassDescriptor
 						StringBuilder sql = new StringBuilder("SHOW COLUMNS FROM " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
 						_log.debug("MIGRATE. execute SQL: " + sql);
 						final ResultSet rs = st.executeQuery(sql.toString());
-						List<String> dbFields = new ArrayList<>(8);
+						// поля в таблице и их типы
+						Map<String, String> tableFields = new HashMap<>(8);
+						ArrayList<String> enumFields = new ArrayList<>();
 
 						sql = new StringBuilder("ALTER TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
 						boolean foundToDrop = false;
 						// проходим все найденные поля в базе
 						while (rs.next())
 						{
+							// получаем имя столбца
 							final String fieldName = rs.getString("Field");
-							dbFields.add(fieldName);
+							final String fieldType = rs.getString("Type");
+							tableFields.put(fieldName, fieldType);
 
 							// ищем в полях сущности
 							boolean found = false;
@@ -183,8 +190,12 @@ public class ClassDescriptor
 								{
 									sql.append(",");
 								}
-								sql.append(" DROP COLUMN " + SEPARATE_CHAR).append(fieldName).append(SEPARATE_CHAR);
+								sql.append(" DROP COLUMN ").append(SEPARATE_CHAR).append(fieldName).append(SEPARATE_CHAR);
 								foundToDrop = true;
+							}
+							else if (fieldType.toLowerCase().startsWith("enum"))
+							{
+								enumFields.add(fieldName);
 							}
 						}
 						if (foundToDrop)
@@ -199,7 +210,7 @@ public class ClassDescriptor
 						for (DatabaseField f : _fields)
 						{
 							// если поля нет в базе - добавим его в базу
-							if (!dbFields.contains(f.getName()))
+							if (!tableFields.containsKey(f.getName()))
 							{
 								if (foundToAdd)
 								{
@@ -207,6 +218,46 @@ public class ClassDescriptor
 								}
 								sql.append(" ADD COLUMN ").append(f.getCreateSql());
 								foundToAdd = true;
+							}
+							else
+							{
+								// поле есть и в базе и в дескрипторе
+								// может это Enum?
+								if (enumFields.contains(f.getName()))
+								{
+									final String enumType = tableFields.get(f.getName());
+									// получаем список всех значений в базе
+									String[] list = enumType.substring(enumType.indexOf("(") + 1, enumType.indexOf(")")).split(",");
+
+									boolean enumEquals;
+									try
+									{
+										// получаем список всех значений в дескрипторе
+										Method method = f.getType().getDeclaredMethod("values");
+										Object[] obj = (Object[]) method.invoke(null);
+										String[] elist = new String[obj.length];
+
+										for (int i = 0; i < obj.length; i++)
+										{
+											String e = APOSTROPHE_CHAR + obj[i].toString() + APOSTROPHE_CHAR;
+											elist[i] = e;
+										}
+										// сравним оба списка
+										enumEquals = Arrays.equals(list, elist);
+									}
+									catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+									{
+										throw new SQLException("Wrong Enum field <" + f.getName() + ">");
+									}
+
+									// если енамы НЕ равны надо обновить в базе
+									if (!enumEquals)
+									{
+
+									}
+
+									System.out.println("migrate enum " + f.getName() + " enumEquals=" + enumEquals);
+								}
 							}
 						}
 						if (foundToAdd)

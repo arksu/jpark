@@ -2,7 +2,12 @@ package org.jpark;
 
 import javax.persistence.Column;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.sql.SQLException;
+import java.util.Arrays;
 
+import static org.jpark.DatabasePlatform.APOSTROPHE_CHAR;
 import static org.jpark.DatabasePlatform.SEPARATE_CHAR;
 
 /**
@@ -155,7 +160,7 @@ public class DatabaseField
 		}
 	}
 
-	public String getCreateSql()
+	public String getCreateSql() throws SQLException
 	{
 		StringBuilder s = new StringBuilder(SEPARATE_CHAR + _name + SEPARATE_CHAR);
 		s.append(" ");
@@ -166,10 +171,39 @@ public class DatabaseField
 		}
 		else
 		{
-			// иначе надо определить тип колонки по типу поля в сущности
-			// TODO
-			String stype = ConversionManager.getFieldTypeDefinition(_type);
-			s.append(stype);
+			if (_type.isEnum())
+			{
+				s.append("ENUM(");
+				try
+				{
+					Method method = _type.getDeclaredMethod("values");
+					Object[] obj = (Object[]) method.invoke(null);
+
+					for (int i = 0; i < obj.length; i++)
+					{
+						s.append(APOSTROPHE_CHAR);
+						s.append(obj[i].toString());
+						s.append(APOSTROPHE_CHAR);
+
+						if ((i + 1) < obj.length)
+						{
+							s.append(", ");
+						}
+					}
+				}
+				catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+				{
+					throw new SQLException("Wrong Enum field <" + _type.getSimpleName() + ">");
+				}
+				s.append(")");
+			}
+			else
+			{
+				// иначе надо определить тип колонки по типу поля в сущности
+				// TODO
+				String stype = ConversionManager.getFieldTypeDefinition(_type);
+				s.append(stype);
+			}
 			if (_isNullable)
 			{
 				s.append(" NULL");

@@ -216,6 +216,7 @@ public class ClassDescriptor
 						}
 					}
 				}
+				// создание таблицы если надо
 				if (!exists && _table.isCreateOnDeploy())
 				{
 					String sql = buildCreateSql();
@@ -226,7 +227,7 @@ public class ClassDescriptor
 		}
 	}
 
-	private String buildCreateSql()
+	private String buildCreateSql() throws SQLException
 	{
 		StringBuilder sql = new StringBuilder("CREATE TABLE " + _table.getName() + " (");
 		boolean isFirst = true;

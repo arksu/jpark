@@ -10,6 +10,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.jpark.DatabasePlatform.APOSTROPHE_CHAR;
+
 public class DatabaseTable
 {
 	private static final Logger _log = LoggerFactory.getLogger(DatabaseTable.class.getName());
@@ -116,7 +118,7 @@ public class DatabaseTable
 
 	public boolean checkExists(Connection connection) throws SQLException
 	{
-		String sql = "SHOW TABLES LIKE '" + _name + "'";
+		String sql = "SHOW TABLES LIKE " + APOSTROPHE_CHAR + _name + APOSTROPHE_CHAR;
 		try (Statement st = connection.createStatement())
 		{
 			ResultSet rs = st.executeQuery(sql);

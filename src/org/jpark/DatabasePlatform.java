@@ -18,6 +18,8 @@ public class DatabasePlatform
 
 	public static final char SEPARATE_CHAR = '`';
 
+	public static final char APOSTROPHE_CHAR = '\'';
+
 	/**
 	 * INTERNAL
 	 * Set the parameter in the JDBC statement.

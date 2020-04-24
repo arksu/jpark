@@ -4,10 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.awt.windows.ThemeReader;
 
-import javax.persistence.Column;
-import javax.persistence.Id;
-import javax.persistence.Index;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -132,7 +129,7 @@ public class ClassDescriptor
 		{
 			// проверим существует ли такая таблица в базе
 			boolean exists = _table.checkExists(connection);
-			_log.debug("DEPLOY table: " + _table.getName() + ", exists: " + exists);
+			_log.debug("DEPLOY table: " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR + ", exists: " + exists);
 
 			try (Statement st = connection.createStatement())
 			{
@@ -200,8 +197,9 @@ public class ClassDescriptor
 						}
 						if (foundToDrop)
 						{
-							_log.debug("execute SQL: " + sql);
-							st.executeUpdate(sql.toString());
+							final String finalSql = sql.toString();
+							_log.debug("execute SQL: " + finalSql);
+							st.executeUpdate(finalSql);
 						}
 
 						sql = new StringBuilder("ALTER TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR);
@@ -226,44 +224,15 @@ public class ClassDescriptor
 								if (enumFields.contains(f.getName()))
 								{
 									final String enumType = tableFields.get(f.getName());
-									// получаем список всех значений в базе
-									String[] list = enumType.substring(enumType.indexOf("(") + 1, enumType.indexOf(")")).split(",");
-
-									boolean enumEquals;
-									try
-									{
-										// получаем список всех значений в дескрипторе
-										Method method = f.getType().getDeclaredMethod("values");
-										Object[] obj = (Object[]) method.invoke(null);
-										String[] elist = new String[obj.length];
-
-										for (int i = 0; i < obj.length; i++)
-										{
-											String e = APOSTROPHE_CHAR + obj[i].toString() + APOSTROPHE_CHAR;
-											elist[i] = e;
-										}
-										// сравним оба списка
-										enumEquals = Arrays.equals(list, elist);
-									}
-									catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
-									{
-										throw new SQLException("Wrong Enum field <" + f.getName() + ">");
-									}
-
-									// если енамы НЕ равны надо обновить в базе
-									if (!enumEquals)
-									{
-
-									}
-
-									System.out.println("migrate enum " + f.getName() + " enumEquals=" + enumEquals);
+									updateEnum(st, enumType, f);
 								}
 							}
 						}
 						if (foundToAdd)
 						{
-							_log.debug("execute SQL: " + sql);
-							st.executeUpdate(sql.toString());
+							final String finalSql = sql.toString();
+							_log.debug("execute SQL: " + finalSql);
+							st.executeUpdate(finalSql);
 						}
 					}
 				}
@@ -278,9 +247,53 @@ public class ClassDescriptor
 		}
 	}
 
+	private void updateEnum(Statement st, String enumType, DatabaseField f) throws SQLException
+	{
+		// получаем список всех значений в базе
+		String[] list = enumType.substring(enumType.indexOf("(") + 1, enumType.indexOf(")")).split(",");
+
+		boolean enumEquals;
+		try
+		{
+			// получаем список всех значений в дескрипторе
+			Method method = f.getType().getDeclaredMethod("values");
+			Object[] obj = (Object[]) method.invoke(null);
+			String[] elist = new String[obj.length];
+
+			for (int i = 0; i < obj.length; i++)
+			{
+				String e = APOSTROPHE_CHAR + obj[i].toString() + APOSTROPHE_CHAR;
+				elist[i] = e;
+			}
+			// сравним оба списка
+			enumEquals = Arrays.equals(list, elist);
+			// если енамы НЕ равны надо обновить в базе
+			if (!enumEquals)
+			{
+				StringBuilder sqlEnum = new StringBuilder("ALTER TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR + " CHANGE " + f.getName() + " " + f.getName() + " ENUM(");
+				for (int i = 0; i < elist.length; i++)
+				{
+					sqlEnum.append(elist[i]);
+					if ((i + 1) < elist.length)
+					{
+						sqlEnum.append(", ");
+					}
+				}
+				sqlEnum.append(")");
+				String finalSql = sqlEnum.toString();
+				_log.debug("execute SQL: " + finalSql);
+				st.executeUpdate(finalSql);
+			}
+		}
+		catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+		{
+			throw new SQLException("Wrong Enum field <" + f.getName() + ">");
+		}
+	}
+
 	private String buildCreateSql() throws SQLException
 	{
-		StringBuilder sql = new StringBuilder("CREATE TABLE " + _table.getName() + " (");
+		StringBuilder sql = new StringBuilder("CREATE TABLE " + SEPARATE_CHAR + _table.getName() + SEPARATE_CHAR + " (");
 		boolean isFirst = true;
 		for (DatabaseField field : _fields)
 		{

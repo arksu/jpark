@@ -37,14 +37,6 @@ public class EntityManager
 	}
 
 	/**
-	 * фабрика для получения коннектов к базе
-	 */
-	public interface ConnectionFactory
-	{
-		Connection get();
-	}
-
-	/**
 	 * передадим фабрику коннектов
 	 */
 	public void setConnectionFactory(ConnectionFactory factory)
@@ -530,7 +522,8 @@ public class EntityManager
 						final DatabaseField field = fields.get(i);
 
 						// получаем значения полей
-						final Object val = DatabasePlatform.getObjectThroughOptimizedDataConversion(resultSet, field, i + 1);
+						int column = resultSet.findColumn(field.getName());
+						final Object val = DatabasePlatform.getObjectThroughOptimizedDataConversion(resultSet, field, column);
 
 						// пишем их в поля клона, используя buildCloneValue, т.е. значения тоже клоним если надо
 						field.getField().set(workingCopy, val);
@@ -636,6 +629,14 @@ public class EntityManager
 	}
 
 	/**
+	 * удаление из базы сущности по ид, не имея ее инстанса
+	 */
+	public void removeById(Class<?> entityClass, Object primaryKeyValue)
+	{
+		// TODO
+	}
+
+	/**
 	 * удалить сущность из базы
 	 * сущность может быть и не управляемой - тогда надо в ней проставить только Id поля и передать сюда,
 	 * будет удалена по id
@@ -716,5 +717,13 @@ public class EntityManager
 	private Map<Object, Object> createMap()
 	{
 		return new IdentityWeakHashMap<>();
+	}
+
+	/**
+	 * фабрика для получения коннектов к базе
+	 */
+	public interface ConnectionFactory
+	{
+		Connection get();
 	}
 }

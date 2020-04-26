@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
-import java.util.Arrays;
 
 import static org.jpark.DatabasePlatform.APOSTROPHE_CHAR;
 import static org.jpark.DatabasePlatform.SEPARATE_CHAR;
@@ -62,6 +61,7 @@ public class DatabaseField
 		{
 			_name = _field.getName().toUpperCase();
 		}
+		_table = table;
 		_qualifiedName = table.getName() + "." + _name;
 		_isNullable = annotation.nullable();
 		_isUpdatable = annotation.updatable();
@@ -96,14 +96,14 @@ public class DatabaseField
 		return _table;
 	}
 
-	public void setName(String name)
-	{
-		_name = name;
-	}
-
 	public String getName()
 	{
 		return _name;
+	}
+
+	public void setName(String name)
+	{
+		_name = name;
 	}
 
 	public Field getField()
@@ -136,6 +136,15 @@ public class DatabaseField
 		return _isPrimaryKey;
 	}
 
+	public void setPrimaryKey(boolean primaryKey)
+	{
+		_isPrimaryKey = primaryKey;
+		if (primaryKey)
+		{
+			_isUpdatable = false;
+		}
+	}
+
 	public boolean isUpdatable()
 	{
 		return _isUpdatable;
@@ -149,15 +158,6 @@ public class DatabaseField
 	public boolean isUpdateInsertId()
 	{
 		return _isUpdateInsertId;
-	}
-
-	public void setPrimaryKey(boolean primaryKey)
-	{
-		_isPrimaryKey = primaryKey;
-		if (primaryKey)
-		{
-			_isUpdatable = false;
-		}
 	}
 
 	public String getCreateSql() throws SQLException
@@ -214,5 +214,11 @@ public class DatabaseField
 			}
 		}
 		return s.toString();
+	}
+
+	@Override
+	public String toString()
+	{
+		return _table.getName() + "." + _name + " - " + _type;
 	}
 }

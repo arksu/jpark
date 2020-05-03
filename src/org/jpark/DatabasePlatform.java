@@ -84,6 +84,10 @@ public class DatabasePlatform
 				statement.setObject(index, parameter);
 			}
 		}
+		else if (parameter instanceof Enum)
+		{
+			statement.setString(index, ((Enum<?>) parameter).name());
+		}
 		else if (parameter instanceof java.sql.Date)
 		{
 			statement.setDate(index, (java.sql.Date) parameter);
@@ -191,11 +195,15 @@ public class DatabasePlatform
 		final int type = resultSet.getMetaData().getColumnType(columnNumber);
 
 		Object value = field;// Means no optimization, need to distinguish from null.
-		Class fieldType = field.getType();
+		Class<?> fieldType = field.getType();
 
 		if (type == Types.VARCHAR || type == Types.CHAR || type == Types.NVARCHAR || type == Types.NCHAR)
 		{
 			value = resultSet.getString(columnNumber);
+			if (field.isEnum())
+			{
+				return field.getEnumConstants().get(value);
+			}
 			return value;
 		}
 		else if (fieldType == null)

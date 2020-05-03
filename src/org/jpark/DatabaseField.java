@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.jpark.DatabasePlatform.APOSTROPHE_CHAR;
 import static org.jpark.DatabasePlatform.SEPARATE_CHAR;
@@ -29,6 +31,9 @@ public class DatabaseField
 	private String _columnDefinition;
 
 	private Class<?> _type;
+
+	private final boolean _isEnum;
+	private final Map<String, Object> _enumConstants;
 
 	/**
 	 * Column name of the field.
@@ -56,6 +61,19 @@ public class DatabaseField
 	{
 		_field = field;
 		_type = _field.getType();
+		_isEnum = _type.isEnum();
+		if (_isEnum)
+		{
+			_enumConstants = new HashMap<>();
+			for (Object e : _type.getEnumConstants())
+			{
+				_enumConstants.put(((Enum<?>) e).name(), e);
+			}
+		}
+		else
+		{
+			_enumConstants = null;
+		}
 		_name = annotation.name();
 		if (_name.length() == 0)
 		{
@@ -82,6 +100,19 @@ public class DatabaseField
 	{
 		_field = field;
 		_type = _field.getType();
+		_isEnum = _type.isEnum();
+		if (_isEnum)
+		{
+			_enumConstants = new HashMap<>();
+			for (Object e : _type.getEnumConstants())
+			{
+				_enumConstants.put(((Enum<?>) e).name(), e);
+			}
+		}
+		else
+		{
+			_enumConstants = null;
+		}
 		_name = _field.getName().toUpperCase();
 		_qualifiedName = table.getName() + "." + _name;
 		_isNullable = false;
@@ -114,6 +145,16 @@ public class DatabaseField
 	public Class<?> getType()
 	{
 		return _type;
+	}
+
+	public boolean isEnum()
+	{
+		return _isEnum;
+	}
+
+	public Map<String, Object> getEnumConstants()
+	{
+		return _enumConstants;
 	}
 
 	public String getQualifiedName()

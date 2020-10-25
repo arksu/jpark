@@ -14,11 +14,9 @@ import static org.jpark.helper.ClassConstants.*;
 
 public class DatabasePlatform
 {
-	private static final int _stringBindingSize = 256;
-
 	public static final char SEPARATE_CHAR = '`';
-
 	public static final char APOSTROPHE_CHAR = '\'';
+	private static final int _stringBindingSize = 256;
 
 	/**
 	 * INTERNAL
@@ -243,6 +241,10 @@ public class DatabasePlatform
 		{
 			value = Boolean.valueOf(resultSet.getByte(columnNumber) == 1);
 			isPrimitive = !((Boolean) value);
+		}
+		else if (fieldType == BLOB)
+		{
+			value = resultSet.getBlob(columnNumber);
 		}
 		else if ((type == Types.TIME) || (type == Types.DATE) || (type == Types.TIMESTAMP))
 		{
